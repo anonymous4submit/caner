@@ -97,7 +97,7 @@ class CanerModel:
             self.label_outputs = tf.reshape(label_projection, [self.nc.batch_size, -1, output_size])
 
             real_target = tf.reshape(self.batch_target, [self.nc.batch_size, self.nc.seq_length])
-            self.label_log_likelihood, self.label_transition_params = tf.contrib.crf.crf_log_libkelihood(
+            self.label_log_likelihood, self.label_transition_params = tf.contrib.crf.crf_log_likelihood(
                 self.label_outputs, real_target, self.batch_seq_len)
 
         with tf.variable_scope('cluster_predictor'):

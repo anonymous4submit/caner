@@ -16,7 +16,7 @@ if __name__ == '__main__':
     class_list = ['Utilities', 'RealEstate', 'Consumer', 'Industry', 'Materials',
                    'Financial', 'InformationTechnology', 'MedicalHealth', 'Telecom']
     for cls in class_list:
-        test_label_list.append('ORG-' + cls)
+        test_label_list.append(cls)
 
     config = NetConfig(vec_type='bert', vec_path=bert_path,
                        label_list=test_label_list,
