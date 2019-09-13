@@ -1,15 +1,15 @@
 from data import ORG_A_CSV
 
 
-def get_domain_list():
-    # Define the list of domains
-    domain_list = ['Utilities', 'RealEstate', 'Consumer', 'Industry', 'Materials',
+def get_cluster_list():
+    # Define the list of clusters
+    cluster_list = ['Utilities', 'RealEstate', 'Consumer', 'Industry', 'Materials',
                    'Financial', 'InformationTechnology', 'MedicalHealth', 'Telecom']
-    return domain_list
+    return cluster_list
 
 
 def get_org_dict():
-    # Return the org's domain dictionary, and org list
+    # Return the org's cluster dictionary, and org list
     org_dict = {}
     with open(ORG_A_CSV, 'r', encoding='utf-8') as f:
         for i, line in enumerate(f.readlines()):
@@ -19,15 +19,15 @@ def get_org_dict():
     return org_dict
 
 
-def get_domain_target(source_list, target_list):
+def get_cluster_target(source_list, target_list):
     """
-    According to the original source list and target list, return the domain target list
+    According to the original source list and target list, return the cluster target list
     :param source_list:
     :param target_list:
-    :return: domain target list
+    :return: cluster target list
     """
     org_dict = get_org_dict()
-    domain_target_list = []
+    cluster_target_list = []
 
     for s_line, t_line in zip(source_list, target_list):
         assert len(s_line) == len(t_line)
@@ -56,29 +56,29 @@ def get_domain_target(source_list, target_list):
                         new_t_line.append((t_line[j] + org_type))
             else:
                 new_t_line.append(t_line[i])
-        domain_target_list.append(new_t_line)
-    return domain_target_list
+        cluster_target_list.append(new_t_line)
+    return cluster_target_list
 
 
-def get_domain_dict_by_csv(csv_list):
+def get_cluster_dict_by_csv(csv_list):
     """
-    Given a list of domain csv, return a dict of 'mention -> domain label'
+    Given a list of cluster csv, return a dict of 'mention -> cluster label'
     """
-    domain_dict = {}
+    cluster_dict = {}
     for csv_f in csv_list:
         with open(csv_f, 'r', encoding='utf-8') as f:
             for i, line in enumerate(f.readlines()):
                 key = line.split(',')[0].strip()
                 value = line.split(',')[1].strip()
-                domain_dict[key] = value
-    return domain_dict
+                cluster_dict[key] = value
+    return cluster_dict
 
 
-def get_domain_target_by_dict(domain_dict, source_list, target_list):
+def get_cluster_target_by_dict(cluster_dict, source_list, target_list):
     """
-    According to the original source list and target list, return the domain target list
+    According to the original source list and target list, return the cluster target list
     """
-    domain_target_list = []
+    cluster_target_list = []
 
     for s_line, t_line in zip(source_list, target_list):
         assert len(s_line) == len(t_line)
@@ -95,8 +95,8 @@ def get_domain_target_by_dict(domain_dict, source_list, target_list):
                         break
                     right += 1
                 cur_org = ''.join(s_line[left:right])
-                if cur_org in domain_dict:
-                    org_type = domain_dict[cur_org]
+                if cur_org in cluster_dict:
+                    org_type = cluster_dict[cur_org]
                 else:
                     # print(cur_org)
                     org_type = ''
@@ -107,5 +107,5 @@ def get_domain_target_by_dict(domain_dict, source_list, target_list):
                         new_t_line.append((t_line[j] + org_type))
             else:
                 new_t_line.append(t_line[i])
-        domain_target_list.append(new_t_line)
-    return domain_target_list
+        cluster_target_list.append(new_t_line)
+    return cluster_target_list

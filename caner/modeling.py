@@ -8,7 +8,7 @@ import os
 
 class CanerModel:
     """
-    This class is responsible for constructing the Domain Adversarial Based Named Entity Recognition model.
+    This class is responsible for constructing the Cluster Adversarial Based Named Entity Recognition model.
     This class cannot be called directly, please use the function in caner.utils to train or predict.
     """
     def __init__(self, config):
@@ -23,7 +23,7 @@ class CanerModel:
 
     def _build_caner_network(self):
         """
-        This part is the core of domain adversarial based named entity recognition
+        This part is the core of cluster adversarial based named entity recognition
         :return:
         """
         output_size = len(self.nc.label_list)
@@ -33,7 +33,7 @@ class CanerModel:
             self.input_feature = tf.placeholder(tf.float32,
                                                 shape=[None, self.nc.seq_length * self.nc.embedding_size])
             self.input_target = tf.placeholder(tf.int32, shape=[None, self.nc.seq_length])
-            self.input_domain_target = tf.placeholder(tf.int32, shape=[None, self.nc.seq_length])
+            self.input_cluster_target = tf.placeholder(tf.int32, shape=[None, self.nc.seq_length])
             # Feed the sentences original length
             self.input_seq_len = tf.placeholder(tf.int32, shape=[None])
             self.input_target_mask = tf.placeholder(tf.float32, shape=[None, self.nc.seq_length])
@@ -41,12 +41,12 @@ class CanerModel:
             self.grl_l = tf.placeholder(tf.float32, [])
 
             dataset = tf.data.Dataset.from_tensor_slices(
-                (self.input_feature, self.input_target, self.input_domain_target,
+                (self.input_feature, self.input_target, self.input_cluster_target,
                  self.input_seq_len, self.input_target_mask)
             ).shuffle(buffer_size=32768).batch(self.nc.batch_size)
 
             self.iter = dataset.make_initializable_iterator()
-            self.batch_feature, self.batch_target, self.batch_domain_target, self.batch_seq_len, self.batch_target_mask = self.iter.get_next()
+            self.batch_feature, self.batch_target, self.batch_cluster_target, self.batch_seq_len, self.batch_target_mask = self.iter.get_next()
             self.batch_input = tf.reshape(self.batch_feature,
                                        [self.nc.batch_size, self.nc.seq_length, self.nc.embedding_size])
             self.batch_input = tf.nn.dropout(self.batch_input, keep_prob=self.nc.dropout_keep_rate)
@@ -100,40 +100,40 @@ class CanerModel:
             self.label_log_likelihood, self.label_transition_params = tf.contrib.crf.crf_log_libkelihood(
                 self.label_outputs, real_target, self.batch_seq_len)
 
-        with tf.variable_scope('domain_predictor'):
+        with tf.variable_scope('cluster_predictor'):
             grl_output = flip_gradient(self.output_feature, self.grl_l)
             # grl_output = tf.reshape(grl_output,
             #                            [self.nc.batch_size, self.nc.seq_length, self.feature_size])
             # grl_output, _ = self._idcnn_layer(grl_output, self.feature_size, name='caner_')
-            domain_x_reshape = tf.reshape(grl_output, [-1, self.feature_size])
-            domain_w_1 = tf.get_variable("domain_w_1", [self.feature_size, self.feature_size], dtype=tf.float32,
+            cluster_x_reshape = tf.reshape(grl_output, [-1, self.feature_size])
+            cluster_w_1 = tf.get_variable("cluster_w_1", [self.feature_size, self.feature_size], dtype=tf.float32,
                                        initializer=initializers.xavier_initializer())
-            domain_b_1 = tf.get_variable("domain_b_1", [self.feature_size], dtype=tf.float32,
+            cluster_b_1 = tf.get_variable("cluster_b_1", [self.feature_size], dtype=tf.float32,
                                        initializer=tf.zeros_initializer())
-            domain_projection_1 = tf.nn.relu(tf.matmul(domain_x_reshape, domain_w_1) + domain_b_1)
-            # domain_projection_1 = tf.nn.dropout(domain_projection_1, keep_prob=self.nc.dropout_keep_rate)
+            cluster_projection_1 = tf.nn.relu(tf.matmul(cluster_x_reshape, cluster_w_1) + cluster_b_1)
+            # cluster_projection_1 = tf.nn.dropout(cluster_projection_1, keep_prob=self.nc.dropout_keep_rate)
 
-            domain_w_2 = tf.get_variable("domain_w_2", [self.feature_size, output_size], dtype=tf.float32,
+            cluster_w_2 = tf.get_variable("cluster_w_2", [self.feature_size, output_size], dtype=tf.float32,
                                          initializer=initializers.xavier_initializer())
-            domain_b_2 = tf.get_variable("domain_b_2", [output_size], dtype=tf.float32,
+            cluster_b_2 = tf.get_variable("cluster_b_2", [output_size], dtype=tf.float32,
                                          initializer=tf.zeros_initializer())
-            domain_projection_2 = tf.matmul(domain_projection_1, domain_w_2) + domain_b_2
+            cluster_projection_2 = tf.matmul(cluster_projection_1, cluster_w_2) + cluster_b_2
 
-            self.domain_outputs = tf.reshape(domain_projection_2, [self.nc.batch_size, -1, output_size])
-            real_domain_target = tf.reshape(self.batch_domain_target, [self.nc.batch_size, self.nc.seq_length])
-            real_domain_target = tf.one_hot(real_domain_target, output_size)
+            self.cluster_outputs = tf.reshape(cluster_projection_2, [self.nc.batch_size, -1, output_size])
+            real_cluster_target = tf.reshape(self.batch_cluster_target, [self.nc.batch_size, self.nc.seq_length])
+            real_cluster_target = tf.one_hot(real_cluster_target, output_size)
 
-            self.domain_loss_output = tf.nn.softmax_cross_entropy_with_logits(
-                logits=self.domain_outputs, labels=real_domain_target)
+            self.cluster_loss_output = tf.nn.softmax_cross_entropy_with_logits(
+                logits=self.cluster_outputs, labels=real_cluster_target)
 
-            domain_mask = tf.reshape(self.batch_target_mask, [self.nc.batch_size, self.nc.seq_length])
+            cluster_mask = tf.reshape(self.batch_target_mask, [self.nc.batch_size, self.nc.seq_length])
 
-            self.domain_loss_output = tf.multiply(self.domain_loss_output, domain_mask)
+            self.cluster_loss_output = tf.multiply(self.cluster_loss_output, cluster_mask)
 
-            self.domain_loss_output = tf.reduce_mean(self.domain_loss_output, -1)
+            self.cluster_loss_output = tf.reduce_mean(self.cluster_loss_output, -1)
 
-            # self.domain_log_likelihood, self.domain_transition_params = tf.contrib.crf.crf_log_likelihood(
-            #     self.domain_outputs, real_domain_target, self.batch_seq_len)
+            # self.cluster_log_likelihood, self.cluster_transition_params = tf.contrib.crf.crf_log_likelihood(
+            #     self.cluster_outputs, real_cluster_target, self.batch_seq_len)
 
     def _bilstm_layer(self, batch_input):
         """
@@ -298,12 +298,12 @@ class CanerModel:
         return outputs
 
     def train_and_eval(self, model_path, feature_model, source_list, target_list,
-                       domain_target_list, target_mask, val_source_list=None, val_target_list=None):
+                       cluster_target_list, target_mask, val_source_list=None, val_target_list=None):
         """
         train and eval model, return the loss records during training
         """
         print('---------- After data preprocessing, start training model ----------')
-        assert len(source_list) == len(target_list) == len(domain_target_list)
+        assert len(source_list) == len(target_list) == len(cluster_target_list)
         val_feature = val_feature_shape = None
         save_path = os.path.join(model_path, 'ner')
 
@@ -311,10 +311,10 @@ class CanerModel:
         self._build_caner_network()
 
         label_crf_loss = tf.reduce_mean(-self.label_log_likelihood)
-        # domain_loss = tf.reduce_mean(-self.domain_log_likelihood)
-        domain_cross_entropy_loss = tf.reduce_mean(self.domain_loss_output)
+        # cluster_loss = tf.reduce_mean(-self.cluster_log_likelihood)
+        cluster_cross_entropy_loss = tf.reduce_mean(self.cluster_loss_output)
         # proportionally Combining Loss
-        caner_loss = label_crf_loss + domain_cross_entropy_loss
+        caner_loss = label_crf_loss + cluster_cross_entropy_loss
 
         # label_train_op = tf.train.GradientDescentOptimizer(learning_rate=self.nc.lr).minimize(label_crf_loss)
         # caner_train_op = tf.train.GradientDescentOptimizer(learning_rate=self.nc.lr).minimize(caner_loss)
@@ -346,20 +346,20 @@ class CanerModel:
                 print('GRL l = ', grl_l)
             self.sess.run(self.iter.initializer, feed_dict={
                 self.input_feature: feature, self.input_target: target_list,
-                self.input_domain_target: domain_target_list, self.input_seq_len: feature_shape,
+                self.input_cluster_target: cluster_target_list, self.input_seq_len: feature_shape,
                 self.input_target_mask: target_mask})
             training_loss = 0.0
             batch_num = 0
-            domain_loss = 0.0
+            cluster_loss = 0.0
 
             # Training in an epoch
             while True:
                 try:
                     if self.nc.train_type == 'caner':
-                        op_, loss_, domain_loss_ = self.sess.run([
-                            caner_train_op, label_crf_loss, domain_cross_entropy_loss],
+                        op_, loss_, cluster_loss_ = self.sess.run([
+                            caner_train_op, label_crf_loss, cluster_cross_entropy_loss],
                             feed_dict={self.grl_l: grl_l})
-                        domain_loss += domain_loss_
+                        cluster_loss += cluster_loss_
                     else:
                         op_, loss_ = self.sess.run([
                              label_train_op, label_crf_loss], feed_dict={self.grl_l: grl_l})
@@ -382,7 +382,7 @@ class CanerModel:
                 batch_num = 0
                 self.sess.run(self.iter.initializer, feed_dict={
                     self.input_feature: val_feature, self.input_target: val_target_list,
-                    self.input_domain_target: val_target_list, self.input_seq_len: val_feature_shape,
+                    self.input_cluster_target: val_target_list, self.input_seq_len: val_feature_shape,
                     self.input_target_mask: val_fake_mask})
                 while True:
                     try:
@@ -405,7 +405,7 @@ class CanerModel:
                 print("Save the checkpoint: ", saver.save(self.sess, save_path, global_step=epoch+1))
             print("Epoch：%d, Training loss：%.8f, Evaluating loss: %.8f (min: %.8f)" % (
                 epoch+1, total_loss['train_loss'][-1], val_loss, min_loss))
-            # print(domain_loss/batch_num)
+            # print(cluster_loss/batch_num)
 
         return total_loss
 
@@ -430,7 +430,7 @@ class CanerModel:
         zero_holder = np.zeros((len(feature_shape), self.nc.seq_length))
         self.sess.run(self.iter.initializer, feed_dict={
             self.input_feature: predcit_feature, self.input_target: zero_holder,
-            self.input_domain_target: zero_holder, self.input_seq_len: feature_shape,
+            self.input_cluster_target: zero_holder, self.input_seq_len: feature_shape,
             self.input_target_mask: zero_holder})
 
         while True:

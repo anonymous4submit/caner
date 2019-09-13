@@ -1,18 +1,18 @@
 import os
 import logging
 from pathlib import Path
-from caner.domain_pipeline import get_org_dict
+from caner.cluster_pipeline import get_org_dict
 import pandas as pd
 logger = logging.getLogger(__name__)
 
 
-def get_ner_metrics(source_file, real_file, predict_file, org_domain=None):
+def get_ner_metrics(source_file, real_file, predict_file, org_cluster=None):
     """
     Calculate and print NER metrics (P, R, F)
     :param source_file: The source file to be predicted
     :param real_file: The real target file of above source_file
     :param predict_file: The model prediction file of above source_file
-    :param org_domain: If None, include all domain, else only include specific domain
+    :param org_cluster: If None, include all cluster, else only include specific cluster
     """
     org_dict = get_org_dict()
     with open(predict_file, 'r', encoding='utf-8') as f:
@@ -24,10 +24,10 @@ def get_ner_metrics(source_file, real_file, predict_file, org_domain=None):
     assert len(predict_sentence_list) == len(real_sentence_list) == len(source_sentence_list)
     match_num = p_denom = r_denom = 0.
     """
-    The domain of the denominator of the precision is uncertain, 
+    The cluster of the denominator of the precision is uncertain, 
     so it is approximated by the recent history. (For experimental reference only)
     """
-    history_domain = ''
+    history_cluster = ''
     for i in range(len(predict_sentence_list)):
         pred_list = predict_sentence_list[i].split()
         real_list = real_sentence_list[i].split()
@@ -47,8 +47,8 @@ def get_ner_metrics(source_file, real_file, predict_file, org_domain=None):
                         real_org += source_list[k]
                     else:
                         break
-                # history_domain = org_dict[real_org]
-                if org_domain is None or org_dict[real_org] == org_domain:
+                # history_cluster = org_dict[real_org]
+                if org_cluster is None or org_dict[real_org] == org_cluster:
                     r_denom += 1
             if pred_list[j][0] == 'B':
                 pred_org = source_list[j]
@@ -57,11 +57,11 @@ def get_ner_metrics(source_file, real_file, predict_file, org_domain=None):
                         pred_org += source_list[k]
                     else:
                         break
-                # if org_domain is None or history_domain == org_domain:
+                # if org_cluster is None or history_cluster == org_cluster:
                 if True:
                     p_denom += 1
             if pred_list[j] == real_list[j] and pred_list[j][0]=='B' and pred_org == real_org:
-                if org_domain is None or org_dict[real_org] == org_domain:
+                if org_cluster is None or org_dict[real_org] == org_cluster:
                     match_num += 1
 
     precision = match_num / p_denom
@@ -71,11 +71,11 @@ def get_ner_metrics(source_file, real_file, predict_file, org_domain=None):
         f1 = 0.0
     else:
         f1 = precision * recall * 2 / (precision + recall)
-    if org_domain is None:
-        org_domain = 'None'
+    if org_cluster is None:
+        org_cluster = 'None'
 
-    print('Domain: %s, Match: %d, P_denom: %d, R_denom: %d, Precision: %.6f, Recall: %.6f, F1-Score: %.6f' %
-          (org_domain, int(match_num), int(p_denom), int(r_denom), precision, recall, f1))
+    print('Cluster: %s, Match: %d, P_denom: %d, R_denom: %d, Precision: %.6f, Recall: %.6f, F1-Score: %.6f' %
+          (org_cluster, int(match_num), int(p_denom), int(r_denom), precision, recall, f1))
 
 
 def get_ner_metrics_2(real_file, predict_file):

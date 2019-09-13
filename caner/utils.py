@@ -7,7 +7,7 @@ from sklearn.preprocessing import LabelEncoder
 from sklearn.preprocessing import OneHotEncoder
 from caner.modeling import CanerModel
 from caner.embedding import embedding_chooser
-from caner.domain_pipeline import get_domain_dict_by_csv, get_domain_target_by_dict
+from caner.cluster_pipeline import get_cluster_dict_by_csv, get_cluster_target_by_dict
 
 from itertools import chain
 
@@ -18,7 +18,7 @@ class NetConfig:
     def __init__(self, vec_type='word2vec', vec_path=None, gpu_used=None, embedding_size=128, unit_num=256,
                  dropout_keep_rate=0.5, batch_size=32, seq_length=200, learning_rate=0.01, label_list=None,
                  iter_num=100, train_type='caner', feature_extractor='idcnn', self_attn=False,
-                 lambda_value=0.25, mask_flag='O', domain_csv_list=None):
+                 lambda_value=0.25, mask_flag='O', cluster_csv_list=None):
         """
         This class maintain the parameter configuration of the model, and can be persisted to JSON files
         :param vec_type: The type of word embedding，such as 'word2vec', 'fasttext'
@@ -32,14 +32,14 @@ class NetConfig:
         :param learning_rate: The learning rate of optimizer in training
         :param label_list: List of all possible labels, such as: ['O','B-ORG','I-ORG']
         :param iter_num: The num of epochs
-        :param train_type: The default type is 'caner'. Set it 'common' if you don't want domain adversarial.
+        :param train_type: The default type is 'caner'. Set it 'common' if you don't want cluster adversarial.
         :param feature_extractor: bilstm or idcnn
         :param self_attn: wether use self attention after feature extractor
         """
         assert train_type in ['caner', 'common'], 'The train type must be "caner" or "common"'
         assert feature_extractor in ['bilstm', 'idcnn'], 'The feature extractor must be "bilstm" or "idcnn"'
         # if train_type == 'caner':
-        #     assert domain_csv_list is not None, 'Domain adversarial training must have a list of domain csv'
+        #     assert cluster_csv_list is not None, 'Cluster adversarial training must have a list of cluster csv'
         self.vec_type = vec_type
         self.vec_path = vec_path
         self.gpu_used = gpu_used
@@ -57,7 +57,7 @@ class NetConfig:
         self.self_attn = self_attn
         self.lambda_value = lambda_value
         self.mask_flag = mask_flag
-        self.domain_csv_list = domain_csv_list
+        self.cluster_csv_list = cluster_csv_list
 
     def save_config(self, ner_path):
         config_dict = {"vec_type": self.vec_type, "vec_path": self.vec_path,
@@ -125,17 +125,17 @@ def train_model(config, ner_folder, source_folder, target_folder,
     onehot_model.fit_label(config.label_list)
     with open(os.path.join(ner_folder, 'onehot_model.pkl'), 'wb') as f:
         pickle.dump(onehot_model, f, True)
-    domain_dict = get_domain_dict_by_csv(config.domain_csv_list)
+    cluster_dict = get_cluster_dict_by_csv(config.cluster_csv_list)
 
     # load data from folder
     source_list, target_list = _get_train_list(source_folder, target_folder)
     # truncate long sentences
     source_list = _truncate_sentences(source_list, max_len=config.seq_length)
     target_list = _truncate_sentences(target_list, max_len=config.seq_length)
-    # get domain target list, for training caner
-    domain_target_list = get_domain_target_by_dict(domain_dict, source_list, target_list)
+    # get cluster target list, for training caner
+    cluster_target_list = get_cluster_target_by_dict(cluster_dict, source_list, target_list)
     target_onehot_list = _convert_target_to_onehot(target_list, onehot_model, config.seq_length)
-    classed_target_vector = _convert_target_to_onehot(domain_target_list, onehot_model, config.seq_length)
+    classed_target_vector = _convert_target_to_onehot(cluster_target_list, onehot_model, config.seq_length)
     target_mask = np.array([[0. if x == config.mask_flag else 1. for x in line]
                             for line in target_list], dtype='float32')
     # initialize caner network
