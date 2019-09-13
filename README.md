@@ -16,14 +16,14 @@ git clone https://github.com/anonymous4submit/caner.git
 ##### 2. Package and install CANER
 
 ```shell
-cd daner
+cd caner
 python setup.py sdist
 pip install ./dist/caner-0.1.0.tar.gz
 ```
 
 ##### 3. Download Pre-trained Embeddings
 
-Download pretrained embeddings form [[link]](https://pan.baidu.com/s/1iSRdQMX_GEmghL2fQET1Hw) named as **embedding.zip**, and unzip it in daner's root folder.
+Download pretrained embeddings form [[link]](https://pan.baidu.com/s/1iSRdQMX_GEmghL2fQET1Hw) named as **embedding.zip**, and unzip it in caner's root folder.
 
 The embedding files include:
 
@@ -71,7 +71,7 @@ This dataset files are categoried into three types:
 
 - **.source**:  Each line have a financial news sentence,  each word separated by spaces.  E.g. *天 润 乳 业 营 业 额 逐 年 增 高*
 - **.target**:  Corresponding to the .source file, the content is the labels of each word. E.g. *B-ORG I-ORG I-ORG I-ORG O O O O O O O*
-- **FIND_cluster.csv**: A table which map organization name to domain. Each line includes an organization name and its corresponding domain.
+- **FIND_cluster.csv**: A table which map organization name to Cluster. Each line includes an organization name and its corresponding Cluster.
 
 We construct the training and testing set of Find-2019 from different secors, described as below:
 

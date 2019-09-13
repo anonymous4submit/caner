@@ -108,7 +108,7 @@ Please do not：
 def train_model(config, ner_folder, source_folder, target_folder,
                 val_source_folder=None, val_target_folder=None):
     """
-    Train the DANER model
+    Train the CANER model
     :param config: Config object of model
     :param ner_folder: Path to save model
     :param source_folder: The path of source files of training dataset
