@@ -32,7 +32,7 @@ setup(
     ],
     install_requires=[
             'gensim==3.4.0',
-            'tensorflow-gpu==1.10.0',
+            'tensorflow-gpu==2.3.1',
             'scikit-learn>=0.20.0',
             'pandas>=0.23.3',
             'numpy>=1.14.3',
